@@ -4,7 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import axios from "axios";
 
 export const StoreContext = createContext(null);
-const backend = "http://localhost:5000";
+const backend = "https://e-commerce-backend-w6hj.onrender.com";
 
 const StoreContextProvider = (props) => {
   const [cartItems, setCartItems] = useState({});

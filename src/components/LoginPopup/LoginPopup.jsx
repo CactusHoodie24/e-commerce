@@ -42,7 +42,7 @@ const LoginPopup = ({ setShowLogin }) => {
 
         if (currState === "Sign Up") {
           // Sign up route
-          res = await axios.post("http://localhost:5000/api/users", payload);
+          res = await axios.post("https://e-commerce-backend-w6hj.onrender.com/api/users", payload);
           if (res.status === 201) {
             const { token, data } = res.data;
             localStorage.setItem("authToken", token);
@@ -51,7 +51,7 @@ const LoginPopup = ({ setShowLogin }) => {
           }
         } else if (currState === "Login") {
           // Login route
-          res = await axios.post("http://localhost:5000/api/users/login", {
+          res = await axios.post("https://e-commerce-backend-w6hj.onrender.com/api/users/login", {
             email: details.email,
             password: details.password,
           });

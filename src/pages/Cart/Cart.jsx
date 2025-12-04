@@ -13,7 +13,7 @@ const Cart = () => {
     useContext(StoreContext);
 
   const navigate = useNavigate();
-  const backend = "http://localhost:5000";
+  const backend = "https://e-commerce-backend-w6hj.onrender.com";
 
   // ----------------------------------------
   // CHECKOUT LOGIC — SAVE CART ONLY!

@@ -20,7 +20,7 @@ const PaymentSuccess = () => {
     const fetchPaymentDetails = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/payment/payment-processing/${paymentId}`
+          `https://e-commerce-backend-w6hj.onrender.com/api/payment/payment-processing/${paymentId}`
         )
         const data = await res.json()
 
@@ -74,7 +74,7 @@ const PaymentSuccess = () => {
             return;
           }
 
-          const res = await fetch("http://localhost:5000/api/confirm/backup-confirm", {
+          const res = await fetch("https://e-commerce-backend-w6hj.onrender.com/api/confirm/backup-confirm", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

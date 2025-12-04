@@ -9,7 +9,7 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const backend = "http://localhost:5000";
+  const backend = "https://e-commerce-backend-w6hj.onrender.com";
 
   const handlePay = async () => {
     if (!mobile || mobile.length < 9) {

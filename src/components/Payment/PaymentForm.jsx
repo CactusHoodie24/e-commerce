@@ -20,7 +20,7 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
     try {
       setLoading(true);
 
-      const paymentRes = await axios.post(`${backend}/api/payment/pay`, {
+      const payload = {
         userId: user.id,
         email: user.email,
         name: user.name,
@@ -28,7 +28,12 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
         currency,
         mobile,
         provider,
-      });
+      };
+
+      // Log the exact payload sent to the backend for debugging
+      console.log('Payment payload ->', payload);
+
+      const paymentRes = await axios.post(`${backend}/api/payment/pay`, payload);
 
       console.log("Mobile Money Payment Response:", paymentRes.data);
 

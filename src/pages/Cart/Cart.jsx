@@ -35,11 +35,16 @@ const Cart = () => {
 
     try {
       // Save cart inside MongoDB
-      const saveRes = await axios.post(`${backend}/api/cart/${user.id}`, {
+      const payload = {
         items: itemsToSave,
         totalamount: getTotalCartAmount() + 2,
         currency: "MWK"
-      });
+      };
+
+      // Log payload sent to backend for debugging
+      console.log('Cart payload ->', payload);
+
+      const saveRes = await axios.post(`${backend}/api/cart/${user.id}`, payload);
 
       console.log("Cart saved:", saveRes.data);
 

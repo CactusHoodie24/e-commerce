@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import "./LoginPopup.css";
 import { assets } from "../../assets/assets";
 import axios from "axios";
+axios.defaults.withCredentials = true;
+import { BACKEND_URL } from "../../config/backend"; 
 
 const LoginPopup = ({ setShowLogin }) => {
   const [currState, setCurrState] = useState("Sign Up");
@@ -35,48 +37,54 @@ const LoginPopup = ({ setShowLogin }) => {
       password: details.password,
     };
 
-    const sendData = async () => {
-      setLoading(true);
-      try {
-        let res;
+   const sendData = async () => {
+  setLoading(true);
+  try {
+    let res;
 
-        if (currState === "Sign Up") {
-          // Sign up route
-          res = await axios.post("https://e-commerce-backend-w6hj.onrender.com/api/users", payload);
-          if (res.status === 201) {
-            const { token, data } = res.data;
-            localStorage.setItem("authToken", token);
-            localStorage.setItem("user", JSON.stringify(data));
-            setSuccess(true);
-          }
-        } else if (currState === "Login") {
-          // Login route
-          res = await axios.post("https://e-commerce-backend-w6hj.onrender.com/api/users/login", {
-            email: details.email,
-            password: details.password,
-          });
-          if (res.status === 200) {
-            const { token, data } = res.data;
-            localStorage.setItem("authToken", token);
-            localStorage.setItem("user", JSON.stringify(data));
-            setSuccess(true);
-          }
-        }
+    if (currState === "Sign Up") {
+      res = await axios.post(
+        `${BACKEND_URL}/api/users`,
+        payload
+      );
 
-        // Clear form & close popup after success
-        setDetails({ name: "", email: "", password: "" });
-        setTimeout(() => {
-          setSuccess(false);
-          setShowLogin(false);
-        }, 1500);
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setLoading(false);
+      if (res.status === 201) {
+        // backend sends HttpOnly cookie automatically
+        setSuccess(true);
+
+        // save user info only (NO TOKEN)
+        localStorage.setItem("user", JSON.stringify(res.data.user));
       }
-    };
+    } else if (currState === "Login") {
+      res = await axios.post(
+        `${BACKEND_URL}/api/users/login`,
+        {
+          email: details.email,
+          password: details.password,
+        }
+      );
 
-    sendData();
+      if (res.status === 200) {
+        setSuccess(true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000)
+      }
+    }
+
+    setDetails({ name: "", email: "", password: "" });
+    setTimeout(() => {
+      setSuccess(false);
+      setShowLogin(false);
+    }, 1500);
+
+  } catch (error) {
+    console.log(error);
+  } finally {
+    setLoading(false);
+  }
+};
+sendData()
   };
 
   return (

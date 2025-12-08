@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
+axios.defaults.withCredentials = true;
 import { useNavigate } from "react-router-dom";
 import './PaymentForm.css'
+import { BACKEND_URL } from "../../config/backend";
 
 const PaymentForm = ({ user, amount, currency, onSuccess }) => {
   const [provider, setProvider] = useState("airtel");
@@ -9,7 +11,7 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const backend = "https://e-commerce-backend-w6hj.onrender.com";
+  const backend = BACKEND_URL;
 
   const handlePay = async () => {
     if (!mobile || mobile.length < 9) {

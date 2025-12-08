@@ -23,6 +23,21 @@
     gap: 40px;
 }
 
+.navbar-right a {
+    display: flex;
+    align-items: center;
+    color: #49557e;
+    text-decoration: none;
+}
+
+.navbar-right a:hover {
+    opacity: 0.7;
+}
+
+.navbar-right svg {
+    font-size: 20px;
+}
+
 .navbar button {
     background: transparent;
     font-size: 16px;

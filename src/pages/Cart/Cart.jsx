@@ -4,7 +4,9 @@ import { useContext } from 'react'
 import { StoreContext } from '../../Context/StoreContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+axios.defaults.withCredentials = true;
 import PaymentForm from '../../components/Payment/PaymentForm'
+import { BACKEND_URL } from '../../config/backend'
 
 const Cart = () => {
   const [showPaymentForm, setShowPaymentForm] = React.useState(false);
@@ -13,7 +15,7 @@ const Cart = () => {
     useContext(StoreContext);
 
   const navigate = useNavigate();
-  const backend = "https://e-commerce-backend-w6hj.onrender.com";
+  const backend = BACKEND_URL;
 
   // ----------------------------------------
   // CHECKOUT LOGIC — SAVE CART ONLY!
@@ -74,14 +76,22 @@ const Cart = () => {
         <hr />
 
         {food_list.map((item) => {
-          if (cartItems[item._id] > 0) {
+          // Safety check: ensure cartItems[item._id] is always a number
+          const cartItem = cartItems[item._id];
+          const quantity = typeof cartItem === 'number' 
+            ? cartItem 
+            : (typeof cartItem === 'object' && cartItem !== null && 'quantity' in cartItem) 
+              ? cartItem.quantity 
+              : 0;
+              
+          if (quantity > 0) {
             return (
-              <div className="cart-items-title cart-items-item">
+              <div key={item._id} className="cart-items-title cart-items-item">
                 <img src={item.image} alt="" />
                 <p>{item.name}</p>
                 <p>{item.price}</p>
-                <p>{cartItems[item._id]}</p>
-                <p>{item.price * cartItems[item._id]}</p>
+                <p>{quantity}</p>
+                <p>{item.price * quantity}</p>
                 <p onClick={() => removeFromCart(item._id)} className="cross">
                   x
                 </p>

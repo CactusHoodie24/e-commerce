@@ -1,82 +1,86 @@
 import { createContext, useState, useEffect } from "react";
 import { food_list } from "../assets/assets";
-import { jwtDecode } from 'jwt-decode';
 import axios from "axios";
+import { BACKEND_URL } from "../config/backend";
 
 export const StoreContext = createContext(null);
-const backend = "https://e-commerce-backend-w6hj.onrender.com";
+const backend = BACKEND_URL;
+
+axios.defaults.withCredentials = true; // send cookies automatically
 
 const StoreContextProvider = (props) => {
   const [cartItems, setCartItems] = useState({});
   const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  // On app load, check localStorage for token and cart
+  // 🔥 On app load — check if the cookie contains a valid JWT
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    const data = localStorage.getItem("user");
-    const savedCart = localStorage.getItem("cartItems");
-
-    if (token) {
+    const checkAuth = async () => {
       try {
-        const decoded = jwtDecode(token);
-        console.log("Decoded token:", decoded);
-        setUser(decoded);
+        const res = await axios.get(`${backend}/api/auth/me`);
+        setUser(res.data.user); // backend returns user info
       } catch (err) {
-        console.error("Invalid token", err);
-        setUser(data ? JSON.parse(data) : null);
+        setUser(null);
+      } finally {
+        setLoadingUser(false);
       }
-    } else if (data) {
-      setUser(JSON.parse(data));
-    }
+    };
 
-    if (savedCart) setCartItems(JSON.parse(savedCart));
+    checkAuth();
   }, []);
 
-  // Persist cart to localStorage
+  // Persist cart to localStorage for UX only
   useEffect(() => {
     localStorage.setItem("cartItems", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // Sync cart with DB when user logs in
-useEffect(() => {
-  const syncCartWithDB = async () => {
+  // Load cart from localStorage
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cartItems");
+    if (savedCart) setCartItems(JSON.parse(savedCart));
+  }, []);
+
+  // 🔥 Sync cart with DB after user login
+  useEffect(() => {
     if (!user) return;
 
-    try {
-      const res = await axios.get(`${backend}/api/cart/${user.id}`);
-      const dbCart = (res.data?.items || []).reduce((acc, item) => {
-        acc[item.itemId] = item.quantity;
-        return acc;
-      }, {});
+    const syncCart = async () => {
+      try {
+        const res = await axios.get(`${backend}/api/cart/${user.id}`);
+        // Convert backend array format [{itemId, quantity}, ...] to frontend object format {itemId: quantity}
+        const dbCartArray = res.data.items || [];
+        const dbCart = dbCartArray.reduce((acc, item) => {
+          acc[item.itemId] = item.quantity;
+          return acc;
+        }, {});
 
-      // Merge DB cart with local cart
-      const mergedCart = { ...dbCart, ...cartItems };
+        // merge local + remote (frontend format takes precedence)
+        const mergedCart = { ...dbCart, ...cartItems };
 
-      // Keep only valid MongoDB ObjectIds
-      const filteredCart = Object.fromEntries(
-        Object.entries(mergedCart).filter(([key, qty]) =>
-          /^[0-9a-fA-F]{24}$/.test(key)
-        )
-      );
+        // Calculate total amount from merged cart
+        const totalAmount = Object.entries(mergedCart).reduce((total, [id, qty]) => {
+          const item = food_list.find(p => p._id === id);
+          return item ? total + item.price * qty : total;
+        }, 0);
 
-      console.log("Updating cart with:", filteredCart);
+        setCartItems(mergedCart);
 
-      setCartItems(filteredCart);
+        // save merged cart to DB
+        await axios.post(`${backend}/api/cart/${user.id}`, { 
+          items: mergedCart,
+          totalamount: totalAmount,
+          currency: "MWK"
+        });
+      } catch (err) {
+        console.error("Cart sync error", err);
+      }
+    };
 
-      // Update DB with filtered cart
-      await axios.post(`${backend}/api/cart/${user.id}`, { items: filteredCart });
-    } catch (err) {
-      console.error("Cart sync error", err);
-    }
-  };
+    syncCart();
+  }, [user]);
 
-  syncCartWithDB();
-}, [user]);
-
-
-  // Utility to update both state and backend
+  // 🔥 Update both state + backend if logged in
   const updateCart = async (newCart) => {
-      console.log("Updating cart with:", newCart); // <--- debug
     setCartItems(newCart);
 
     if (user) {
@@ -88,21 +92,19 @@ useEffect(() => {
     }
   };
 
- const addToCart = (itemId) => {
-  setCartItems(prev => ({
-    ...prev,
-    [itemId]: (prev[itemId] || 0) + 1
-  }));
-};
+  const addToCart = (itemId) => {
+    updateCart({
+      ...cartItems,
+      [itemId]: (cartItems[itemId] || 0) + 1
+    });
+  };
 
-const removeFromCart = (itemId) => {
-  setCartItems(prev => ({
-    ...prev,
-    [itemId]: Math.max((prev[itemId] || 0) - 1, 0)
-  }));
-};
-
-
+  const removeFromCart = (itemId) => {
+    updateCart({
+      ...cartItems,
+      [itemId]: Math.max((cartItems[itemId] || 0) - 1, 0)
+    });
+  };
 
   const getTotalCartAmount = () => {
     return Object.entries(cartItems).reduce((total, [id, qty]) => {
@@ -114,12 +116,12 @@ const removeFromCart = (itemId) => {
   const contextValue = {
     food_list,
     cartItems,
-    setCartItems,
     addToCart,
     removeFromCart,
     getTotalCartAmount,
     user,
     setUser,
+    loadingUser
   };
 
   return (

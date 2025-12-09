@@ -15,6 +15,7 @@ const LoginPopup = ({ setShowLogin }) => {
   const [warning, setWarning] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -39,6 +40,7 @@ const LoginPopup = ({ setShowLogin }) => {
 
    const sendData = async () => {
   setLoading(true);
+  setError("");
   try {
     let res;
 
@@ -69,6 +71,8 @@ const LoginPopup = ({ setShowLogin }) => {
         setTimeout(() => {
           window.location.reload();
         }, 2000)
+      } else {
+        setSuccess(false)
       }
     }
 
@@ -79,7 +83,11 @@ const LoginPopup = ({ setShowLogin }) => {
     }, 1500);
 
   } catch (error) {
-    console.log(error);
+      if (error.response && error.response.data && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
   } finally {
     setLoading(false);
   }
@@ -142,7 +150,7 @@ sendData()
               : "Login successful 🎉"}
           </p>
         )}
-
+        {error && <p className="error shake">{error}</p>}
         <button disabled={loading} className={loading ? "loading-btn" : ""}>
           {loading
             ? "Processing..."

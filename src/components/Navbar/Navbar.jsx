@@ -3,17 +3,31 @@ import './navbar.css'
 import { assets } from '../../assets/assets'
 import { Link } from 'react-router-dom'
 import { StoreContext } from '../../Context/StoreContext'
-
+import axios from 'axios'
 import { faExchangeAlt, faCreditCardAlt, faExchange } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { BACKEND_URL } from "../../config/backend";
+
 const Navbar = ({ setShowLogin }) => {
   const [menu, setMenu] = useState("menu");
   const { getTotalCartAmount, user, setUser } = useContext(StoreContext);
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    setUser(null);
+   const removeUser = async () => {
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/logout`, {credentials: true})
+    if(res.status === 200) {
+      setUser(null)
+      setTimeout(() => {
+        window.location.reload()
+      })
+    }
+    } catch (error) {
+      console.log(error)
+    }
+    
+   }
+   removeUser()
   };
 
   return (

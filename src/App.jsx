@@ -32,9 +32,8 @@ const App = () => {
     // Only show toast if status actually changed
     if (prevStatus !== currentStatus) {
       switch (currentStatus) {
-        case 'RECONCILE_PROCESSING':
         case 'PROCESSING':
-          addToast('Checking transaction status...', 'processing', 3000)
+          addToast('You have a pending payment. Checking transaction status...', 'processing', 5000)
           break
         case 'SUBMITTING':
           addToast('Submitting payment request...', 'info', 3000)

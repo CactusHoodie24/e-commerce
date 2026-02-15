@@ -65,6 +65,7 @@ const App = () => {
 
   // Reconciliation logic - runs immediately on app load
   useEffect(() => {
+    console.log("Reconciliation effect ran")
     async function reconcile() {
       const pendingKeyString = localStorage.getItem(IDEMPOTENCY_STORAGE_KEY)
       if (!pendingKeyString) return
@@ -72,7 +73,11 @@ const App = () => {
       try {
         // Parse the stored transaction object
         const pendingTransaction = JSON.parse(pendingKeyString)
-        const { key, payload, attemptCount = 0 } = pendingTransaction
+        // Support both old format (key) and new format (transactionId)
+        const key = pendingTransaction.transactionId || pendingTransaction.key
+        const payload = pendingTransaction.payload
+        // Support both old format (attemptCount) and new format (attempts)
+        const attemptCount = pendingTransaction.attempts !== undefined ? pendingTransaction.attempts : (pendingTransaction.attemptCount || 0)
 
         if (!key) {
           console.error("Invalid pending transaction format")
@@ -81,10 +86,23 @@ const App = () => {
           return
         }
 
+        const payload1 =  {
+    idempotencyKey: key,
+    userId: "692ecde699442946aaa2162e"
+  }
+
         // Check payment status using the key
         const response = await axios.get(
-          `${backend}/api/payment/status?key=${key}`,
-        )
+  `${backend}/api/payment/status`, 
+  {
+    headers: {
+      "Idempotency-Key": key
+    },
+   params: {
+      userId: "692ecde699442946aaa2162e"
+    }
+
+  })
         const status = response.data.status
 
         if (status === "SUCCESS") {
@@ -103,7 +121,10 @@ const App = () => {
 
           const updatedTransaction = {
             ...pendingTransaction,
-            attemptCount: attemptCount + 1,
+            transactionId: key, // Ensure we use transactionId format
+            status: "SUBMITTING",
+            attempts: attemptCount + 1,
+            lastUpdatedAt: Date.now(),
           }
           localStorage.setItem(
             IDEMPOTENCY_STORAGE_KEY,
@@ -154,7 +175,7 @@ const App = () => {
       }
     }
     reconcile()
-  }, [backend, navigate, dispatch, addToast])
+  }, [])
   return (
     <>
     {showLogin?<LoginPopup setShowLogin={setShowLogin}/>:<></>}

@@ -6,6 +6,7 @@ import "./PaymentForm.css";
 import { BACKEND_URL } from "../../config/backend";
 import { usePayment } from "../../Context/paymentContext";
 import { useToast } from "../../Context/ToastContext";
+import { getOrCreateIdempotencyKey } from "../../utils/getorCreateIdempotencyKey";
 
 const PaymentForm = ({ user, amount, currency, onSuccess }) => {
   const [provider, setProvider] = useState("airtel");
@@ -20,49 +21,20 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
 
   // Derive loading and hasPendingPayment from state.status
   const isLoading = state.status === "SUBMITTING" || state.status === "PROCESSING" || state.status === "RECONCILE_PROCESSING";
-  const hasPendingPayment = state.status === "PROCESSING" || 
-                            state.status === "CREATED_LOCAL" 
-                           
+  const hasPendingPayment = state.status === "PROCESSING" ||
+    state.status === "CREATED_LOCAL"
 
-  const generateUUID = () => {
-    if (
-      typeof window !== "undefined" &&
-      window.crypto &&
-      window.crypto.randomUUID
-    ) {
-      return window.crypto.randomUUID();
-    }
 
-    // fallback UUID v4
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
-      /[xy]/g,
-      function (c) {
-        const r = (Math.random() * 16) | 0;
-        const v = c === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      },
-    );
-  };
-
-  const getOrCreateIdempotencyKey = () => {
-    try {
-      const existing = localStorage.getItem(IDEMPOTENCY_STORAGE_KEY);
-      if (existing) {
-        const parsed = JSON.parse(existing);
-        return parsed.key;
-      }
-      return generateUUID();
-    } catch (e) {
-      return generateUUID();
-    }
-  };
 
   const savePendingTransaction = (key, payload) => {
     try {
       const pendingTransaction = {
-        key,
+        transactionId: key,
+        status: "CREATED_LOCAL",
+        attempts: 0,
         payload,
         createdAt: Date.now(),
+        lastUpdatedAt: Date.now(),
       };
       localStorage.setItem(
         IDEMPOTENCY_STORAGE_KEY,
@@ -80,11 +52,10 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
     }
 
     try {
-     
 
       // create or reuse an idempotency key for this client-initiated transaction
-      const idempotencyKey = getOrCreateIdempotencyKey();
-     
+      const idempotencyKey = getOrCreateIdempotencyKey(IDEMPOTENCY_STORAGE_KEY);
+
 
       const payload = {
         userId: user.id,
@@ -119,7 +90,7 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
         // clear the pending idempotency key on successful creation
         try {
           localStorage.removeItem(IDEMPOTENCY_STORAGE_KEY);
-        } catch (e) {}
+        } catch (e) { }
 
         dispatch({ type: "SUBMIT_SUCCESS", paymentId: paymentRes.data.paymentId });
 

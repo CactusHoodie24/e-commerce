@@ -1,0 +1,153 @@
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 300px;
+  max-width: 500px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: white;
+  pointer-events: auto;
+  transform: translateX(400px);
+  opacity: 0;
+  transition: all 0.3s ease-in-out;
+}
+
+.toast-visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.toast-hidden {
+  transform: translateX(400px);
+  opacity: 0;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.toast-close:hover {
+  color: #333;
+}
+
+.toast-success {
+  background: #10b981;
+  color: white;
+}
+
+.toast-success .toast-message {
+  color: white;
+}
+
+.toast-success .toast-close {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.toast-success .toast-close:hover {
+  color: white;
+}
+
+.toast-error {
+  background: #ef4444;
+  color: white;
+}
+
+.toast-error .toast-message {
+  color: white;
+}
+
+.toast-error .toast-close {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.toast-error .toast-close:hover {
+  color: white;
+}
+
+.toast-warning {
+  background: #f59e0b;
+  color: white;
+}
+
+.toast-warning .toast-message {
+  color: white;
+}
+
+.toast-warning .toast-close {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.toast-warning .toast-close:hover {
+  color: white;
+}
+
+.toast-info {
+  background: #3b82f6;
+  color: white;
+}
+
+.toast-info .toast-message {
+  color: white;
+}
+
+.toast-info .toast-close {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.toast-info .toast-close:hover {
+  color: white;
+}
+
+.toast-processing {
+  background: #6366f1;
+  color: white;
+}
+
+.toast-processing .toast-message {
+  color: white;
+}
+
+.toast-processing .toast-close {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.toast-processing .toast-close:hover {
+  color: white;
+}
+

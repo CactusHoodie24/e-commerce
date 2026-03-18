@@ -159,7 +159,7 @@ const App = () => {
             "info",
             5000
           )
-          // Keep the key for next reconciliation
+          
         }
       } catch (error) {
         console.error("Error checking payment status:", error)

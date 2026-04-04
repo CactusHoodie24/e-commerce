@@ -134,7 +134,7 @@ const App = () => {
           try {
             const paymentRes = await axios.post(
               `${backend}/api/payment/pay`,
-              payload,
+              { ...(payload && typeof payload === "object" ? payload : {}), idempotencyKey: key },
               { headers: { "Idempotency-Key": key } },
             )
 

@@ -2,10 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./PaymentSuccess.css";
 import { BACKEND_URL } from "../../config/backend";
+import { usePayment } from "../../Context/paymentContext";
 
 const PaymentSuccess = () => {
   const { paymentId } = useParams();
   const navigate = useNavigate();
+  const { dispatch } = usePayment();
 
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,12 +36,25 @@ const PaymentSuccess = () => {
             latestChargeIdRef.current = data.payment.chargeId;
           }
 
+          // Bank transfers are manual, so there is no mobile money webhook to wait for.
+          if (data.payment.provider === "bank") {
+            setWaiting(false);
+            dispatch({ type: "RESET" });
+            clearInterval(interval);
+            clearTimeout(timeout);
+            return;
+          }
+
           // If webhook updated the payment, stop polling
           if (
             data.payment.status === "success" ||
             data.payment.status === "completed"
           ) {
             setWaiting(false);
+            dispatch({
+              type: "RECONCILE_SUCCESS",
+              paymentId: data.payment.id,
+            });
             clearInterval(interval);
             clearTimeout(timeout);
           }
@@ -70,6 +85,12 @@ const PaymentSuccess = () => {
         try {
           // Use the provider charge ID (payment.chargeId) — server expects chargeId,
           // not the MongoDB paymentId. Stored in ref so we have the latest value.
+          if (payment?.provider === "bank") {
+            setWaiting(false);
+            clearInterval(interval);
+            return;
+          }
+
           const providerChargeId = latestChargeIdRef.current;
 
           if (!providerChargeId) {
@@ -103,6 +124,10 @@ const PaymentSuccess = () => {
             // Only stop waiting if payment is actually successful
             if (backup.verifiedStatus === "success" || backup.verifiedStatus === "completed") {
               setWaiting(false);
+              dispatch({
+                type: "RECONCILE_SUCCESS",
+                paymentId: backup.payment?._id || backup.payment?.id,
+              });
               clearInterval(interval);
             } else {
               // Payment verification shows it failed
@@ -126,7 +151,12 @@ const PaymentSuccess = () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [paymentId]);
+  }, [paymentId, dispatch]);
+
+  const continueShopping = () => {
+    dispatch({ type: "RESET" });
+    navigate("/");
+  };
 
   // Initial loading
   if (loading) {
@@ -160,6 +190,74 @@ const PaymentSuccess = () => {
     );
   }
 
+  const formatDate = (date) =>
+    new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const bankInstructions = payment.rawResponse?.bankInstructions;
+
+  if (payment.provider === "bank") {
+    return (
+      <div className="payment-success-container">
+        <div className="success-card">
+          <div className="success-header">
+            <h1>Bank Transfer Pending</h1>
+            <p>{bankInstructions?.message}</p>
+          </div>
+
+          <div className="payment-details">
+            <div className="detail-section">
+              <h3>Bank Account Details</h3>
+
+              <div className="detail-row">
+                <span className="label">Account Name:</span>
+                <span className="value">{bankInstructions?.accountName}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Account Number:</span>
+                <span className="value">{bankInstructions?.accountNumber}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Bank:</span>
+                <span className="value">{bankInstructions?.bankName}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Amount:</span>
+                <span className="value highlight">
+                  {payment.currency} {payment.amount?.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Status:</span>
+                <span className="value">{payment.status}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="label">Date:</span>
+                <span className="value">{formatDate(payment.createdAt)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="payment-actions">
+            <button className="btn btn-primary" onClick={continueShopping}>
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Webhook has not confirmed yet, still waiting
   if (waiting) {
     return (
@@ -174,15 +272,6 @@ const PaymentSuccess = () => {
   }
 
   // Success view
-  const formatDate = (date) =>
-    new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
   return (
     <div className="payment-success-container">
       <div className="success-card">
@@ -221,7 +310,7 @@ const PaymentSuccess = () => {
         </div>
 
         <div className="payment-actions">
-          <button className="btn btn-primary" onClick={() => navigate("/")}>
+          <button className="btn btn-primary" onClick={continueShopping}>
             Continue Shopping
           </button>
         </div>

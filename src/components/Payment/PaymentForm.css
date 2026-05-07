@@ -10,6 +10,13 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 15px;
+  gap: 8px;
+}
+
+.providers label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .phone-input {
@@ -33,6 +40,30 @@
 
 .pay-btn:hover {
   background: #e64a19;
+}
+
+.pay-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.bank-instructions {
+  border: 1px solid #ffd6c9;
+  background: #fff7f4;
+  border-radius: 6px;
+  color: #333;
+  margin-bottom: 15px;
+  padding: 10px;
+}
+
+.bank-instructions p {
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.bank-instructions span {
+  display: block;
+  font-size: 14px;
 }
 /* Modal Styles */
 .modal-overlay {

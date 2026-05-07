@@ -8,23 +8,24 @@ import { usePayment } from "../../Context/paymentContext";
 import { useToast } from "../../Context/ToastContext";
 import { getOrCreateIdempotencyKey } from "../../utils/getorCreateIdempotencyKey";
 
-const PaymentForm = ({ user, amount, currency, onSuccess }) => {
+const PaymentForm = ({ user, amount, currency }) => {
+  const [paymentMethod, setPaymentMethod] = useState("mobile_money");
   const [provider, setProvider] = useState("airtel");
   const [mobile, setMobile] = useState("");
+  const [bankInstructions, setBankInstructions] = useState(null);
   const navigate = useNavigate();
   const { state, dispatch } = usePayment();
   const { addToast } = useToast();
 
   const backend = BACKEND_URL;
-
   const IDEMPOTENCY_STORAGE_KEY = "pendingIdempotencyKey";
 
-  // Derive loading and hasPendingPayment from state.status
-  const isLoading = state.status === "SUBMITTING" || state.status === "PROCESSING" || state.status === "RECONCILE_PROCESSING";
-  const hasPendingPayment = state.status === "PROCESSING" ||
-    state.status === "CREATED_LOCAL"
-
-
+  const isLoading =
+    state.status === "SUBMITTING" ||
+    state.status === "PROCESSING" ||
+    state.status === "RECONCILE_PROCESSING";
+  const hasPendingPayment =
+    state.status === "PROCESSING" || state.status === "CREATED_LOCAL";
 
   const savePendingTransaction = (key, payload) => {
     try {
@@ -46,16 +47,15 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
   };
 
   const handlePay = async () => {
-    if (!mobile || mobile.length < 9) {
+    if (paymentMethod === "mobile_money" && (!mobile || mobile.length < 9)) {
       addToast("Enter a valid phone number", "error", 4000);
       return;
     }
 
     try {
-
-      // create or reuse an idempotency key for this client-initiated transaction
-      const idempotencyKey = getOrCreateIdempotencyKey(IDEMPOTENCY_STORAGE_KEY);
-
+      const idempotencyKey = getOrCreateIdempotencyKey(
+        IDEMPOTENCY_STORAGE_KEY,
+      );
 
       const payload = {
         userId: user.id,
@@ -63,87 +63,140 @@ const PaymentForm = ({ user, amount, currency, onSuccess }) => {
         name: user.name,
         amount,
         currency,
-        mobile,
-        provider,
+        mobile: paymentMethod === "mobile_money" ? mobile : undefined,
+        provider: paymentMethod === "bank" ? "bank" : provider,
+        paymentMethod,
         idempotencyKey,
       };
 
-      // Save pending transaction to localStorage BEFORE making the request
       savePendingTransaction(idempotencyKey, payload);
       dispatch({ type: "SUBMIT_REQUEST" });
 
-      // Log the exact payload sent to the backend for debugging
       console.log("Payment payload ->", payload);
 
-      const paymentRes = await axios.post(
-        `${backend}/api/payment/pay`,
-        payload,
-        { headers: { "Idempotency-Key": idempotencyKey } },
-      );
+      const paymentRes = await axios.post(`${backend}/api/payment/pay`, payload, {
+        headers: { "Idempotency-Key": idempotencyKey },
+      });
 
-      console.log("Mobile Money Payment Response:", paymentRes.data);
+      console.log("Payment Response:", paymentRes.data);
 
-      // Store paymentId in sessionStorage before redirect
+      if (paymentRes.data.bankInstructions) {
+        setBankInstructions(paymentRes.data.bankInstructions);
+        addToast(paymentRes.data.bankInstructions.message, "info", 7000);
+      }
+
       if (paymentRes.data.paymentId) {
         sessionStorage.setItem("lastPaymentId", paymentRes.data.paymentId);
 
-        // clear the pending idempotency key on successful creation
         try {
           localStorage.removeItem(IDEMPOTENCY_STORAGE_KEY);
-        } catch (e) { }
+        } catch (e) {
+          console.error("Failed to clear pending transaction:", e);
+        }
 
-        dispatch({ type: "SUBMIT_SUCCESS", paymentId: paymentRes.data.paymentId });
+        dispatch({
+          type: "SUBMIT_SUCCESS",
+          paymentId: paymentRes.data.paymentId,
+        });
+
+        const redirectDelay = paymentRes.data.bankInstructions ? 5000 : 1500;
 
         setTimeout(() => {
           navigate(`/payment-success/${paymentRes.data.paymentId}`);
-        }, 1500); // Give toast time to display and user time to read
+        }, redirectDelay);
       }
-
-      if (onSuccess) onSuccess(); // Redirect from Cart component
     } catch (error) {
       console.error("Payment error:", error);
-      dispatch({ type: "SUBMIT_FAILURE", error: error.message || "Payment failed. Try again." });
-      // The pending transaction is already saved in localStorage for reconciliation
+      dispatch({
+        type: "SUBMIT_FAILURE",
+        error: error.message || "Payment failed. Try again.",
+      });
     }
   };
 
   return (
     <>
       <div className="payment-box">
-        <h3>Select Mobile Money</h3>
+        <h3>Select Payment Method</h3>
 
         <div className="providers">
           <label>
             <input
               type="radio"
-              value="airtel"
-              checked={provider === "airtel"}
-              onChange={() => setProvider("airtel")}
+              value="mobile_money"
+              checked={paymentMethod === "mobile_money"}
+              onChange={() => {
+                setPaymentMethod("mobile_money");
+                setBankInstructions(null);
+              }}
             />
-            Airtel Money
+            Mobile Money
           </label>
 
           <label>
             <input
               type="radio"
-              value="tnm"
-              checked={provider === "tnm"}
-              onChange={() => setProvider("tnm")}
+              value="bank"
+              checked={paymentMethod === "bank"}
+              onChange={() => setPaymentMethod("bank")}
             />
-            TNM Mpamba
+            Pay through bank
           </label>
         </div>
 
-        <input
-          type="text"
-          className="phone-input"
-          placeholder="Enter phone number"
-          value={mobile}
-          onChange={(e) => setMobile(e.target.value)}
-        />
+        {paymentMethod === "mobile_money" && (
+          <>
+            <div className="providers">
+              <label>
+                <input
+                  type="radio"
+                  value="airtel"
+                  checked={provider === "airtel"}
+                  onChange={() => setProvider("airtel")}
+                />
+                Airtel Money
+              </label>
 
-        <button className="pay-btn" onClick={handlePay} disabled={isLoading || hasPendingPayment}>
-          {isLoading ? "Processing..." : hasPendingPayment ? "Payment Pending…" : "Pay Now"}
+              <label>
+                <input
+                  type="radio"
+                  value="tnm"
+                  checked={provider === "tnm"}
+                  onChange={() => setProvider("tnm")}
+                />
+                TNM Mpamba
+              </label>
+            </div>
+
+            <input
+              type="text"
+              className="phone-input"
+              placeholder="Enter phone number"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+            />
+          </>
+        )}
+
+        {bankInstructions && (
+          <div className="bank-instructions">
+            <p>{bankInstructions.message}</p>
+            <span>Account name: {bankInstructions.accountName}</span>
+          </div>
+        )}
+
+        <button
+          className="pay-btn"
+          onClick={handlePay}
+          disabled={isLoading || hasPendingPayment}
+        >
+          {isLoading
+            ? "Processing..."
+            : hasPendingPayment
+              ? "Payment Pending..."
+              : paymentMethod === "bank"
+                ? "Pay Through Bank"
+                : "Pay Now"}
         </button>
       </div>
     </>
